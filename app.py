@@ -23,6 +23,10 @@ STEMS_OUTPUT_FOLDER = os.path.join(os.getcwd(), 'static', 'stems_output')
 if not os.path.exists(STEMS_OUTPUT_FOLDER):
     os.makedirs(STEMS_OUTPUT_FOLDER)
 
+DOWNLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'Cyber_Downloads_Music')
+if not os.path.exists(DOWNLOAD_FOLDER):
+    os.makedirs(DOWNLOAD_FOLDER)
+
 def init_db():
     conn = sqlite3.connect("users.db")
     cursor = conn.cursor()
@@ -88,13 +92,10 @@ def get_drive_space(path):
 @app.route('/')
 def index():
     if 'user' in session:
-        default_dir = os.path.join(os.getcwd(), "Cyber_Downloads_Music")
-        if not os.path.exists(default_dir):
-            os.makedirs(default_dir)
-        space_info = get_drive_space(default_dir)
+        space_info = get_drive_space(DOWNLOAD_FOLDER)
         avatar = get_user_avatar(session['user'])
         is_admin = check_is_admin(session['user'])
-        return render_template('index.html', logged_in=True, user=session['user'], avatar=avatar, path=default_dir, space=space_info, is_admin=is_admin)
+        return render_template('index.html', logged_in=True, user=session['user'], avatar=avatar, path=DOWNLOAD_FOLDER, space=space_info, is_admin=is_admin)
     return render_template('index.html', logged_in=False)
 
 @app.route('/login', methods=['POST'])
@@ -182,11 +183,8 @@ def logout():
 
 @app.route('/browse', methods=['POST'])
 def browse():
-    default_dir = os.path.join(os.getcwd(), "Cyber_Downloads_Music")
-    if not os.path.exists(default_dir):
-        os.makedirs(default_dir)
-    space_info = get_drive_space(default_dir)
-    return jsonify({'status': 'success', 'path': default_dir, 'space': space_info})
+    space_info = get_drive_space(DOWNLOAD_FOLDER)
+    return jsonify({'status': 'success', 'path': DOWNLOAD_FOLDER, 'space': space_info})
 
 @app.route('/search_yt', methods=['POST'])
 def search_yt():
@@ -270,7 +268,6 @@ def search_yt():
 def download():
     data = request.get_json()
     raw_url = data.get('url', '').strip()
-    output_dir = data.get('path', os.path.join(os.getcwd(), "Cyber_Downloads_Music"))
 
     if not raw_url:
         return jsonify({'status': 'error', 'message': 'Đường dẫn YouTube không được để trống!'})
@@ -282,13 +279,13 @@ def download():
         query_params = urlparse.parse_qs(parsed_url.query)
         clean_url = f"https://www.youtube.com/watch?v={query_params['v'][0]}" if "v" in query_params else raw_url
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    if not os.path.exists(DOWNLOAD_FOLDER):
+        os.makedirs(DOWNLOAD_FOLDER)
 
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
-        'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
+        'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(title)s.%(ext)s'),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'wav',
@@ -299,18 +296,19 @@ def download():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(clean_url, download=True)
             title = info.get('title', 'Unknown Audio')
+            filename = f"{title}.wav"
 
         if 'user' in session:
             conn = sqlite3.connect("users.db")
             cursor = conn.cursor()
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             cursor.execute("INSERT INTO history (username, title, format, path, timestamp) VALUES (?, ?, ?, ?, ?)",
-                           (session['user'], title, 'WAV', output_dir, timestamp))
+                           (session['user'], title, 'WAV', DOWNLOAD_FOLDER, timestamp))
             conn.commit()
             conn.close()
 
-        space_info = get_drive_space(output_dir)
-        return jsonify({'status': 'success', 'path': output_dir, 'space': space_info})
+        space_info = get_drive_space(DOWNLOAD_FOLDER)
+        return jsonify({'status': 'success', 'path': DOWNLOAD_FOLDER, 'filename': filename, 'space': space_info})
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)[:120]})
 
