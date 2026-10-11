@@ -1,5 +1,5 @@
 Flask
-yt-dlp --upgrade
+yt-dlp
 librosa
 numpy
 gunicorn
