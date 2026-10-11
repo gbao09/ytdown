@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YT Music Studio - Graphite & Silver Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #090B0F;
+            --bg-app: #101318;
+            --bg-card: #151920;
+            --bg-panel: #1B2028;
+            --bg-input: #0D1015;
+            --border-default: #2B3039;
+            --border-active: #424955;
+            
+            --silver-primary: #C3CAD4;
+            --silver-bright: #E3E7ED;
+            --gray-neutral: #929BA8;
+            
+            --text-main: #F0F2F5;
+            --text-sub: #A3ABB7;
+            --text-muted: #747D8A;
+            
+            --accent: #B9C2CE;
+            --accent-hover: #E0E5EC;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(195, 202, 212, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(146, 155, 168, 0.02) 0%, transparent 40%);
+            overflow: hidden;
+            color: var(--text-main);
+        }
+        #dust-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        #web-loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-main);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out;
+        }
+        #web-loader.loaded {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loader-bar {
+            width: 200px;
+            height: 3px;
+            background: var(--border-default);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 16px;
+        }
+        .loader-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0%;
+            background: var(--silver-primary);
+            animation: loadProgress 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes loadProgress {
+            0% { width: 0%; }
+            50% { width: 75%; }
+            100% { width: 100%; }
+        }
+
+        .cinema-card {
+            background: var(--bg-app);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border-default);
+            box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.85);
+            position: relative;
+        }
+
+        .liquid-shimmer {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(115deg, 
+                transparent 0%, 
+                rgba(195, 202, 212, 0.04) 45%, 
+                rgba(227, 231, 237, 0.06) 50%, 
+                transparent 60%
+            );
+            transform: translate3d(-100%, 0, 0);
+            pointer-events: none;
+            z-index: 30;
+            will-change: transform;
+        }
+
+        @keyframes liquidSlide {
+            0% { transform: translate3d(-100%, 0, 0); opacity: 0; }
+            30% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { transform: translate3d(100%, 0, 0); opacity: 0; }
+        }
+
+        .liquid-shimmer.active {
+            animation: liquidSlide 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        .cinema-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+        .cinema-input {
+            background: var(--bg-input) !important;
+            border: 1px solid var(--border-default) !important;
+            color: var(--text-main) !important;
+        }
+        .cinema-input:focus {
+            border-color: var(--border-active) !important;
+            box-shadow: 0 0 0 1px var(--border-active);
+        }
+
+        .tab-content {
+            opacity: 0;
+            transform: translate3d(0, 6px, 0);
+            transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: none;
+            will-change: opacity, transform;
+        }
+        .tab-content.active {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+            display: flex;
+        }
+
+        #supportPopup {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+            transform: scale(0.96);
+        }
+        #supportPopup.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+        #spotlight {
+            pointer-events: none;
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(195, 202, 212, 0.04) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            transition: width 0.2s, height 0.2s;
+            z-index: 2;
+        }
+        
+        .theme-primary { color: var(--silver-bright); }
+        .theme-bg-btn { 
+            background: linear-gradient(180deg, #252D3A 0%, #1A212C 100%); 
+            border: 1px solid var(--border-active);
+            color: var(--silver-bright);
+        }
+        .theme-bg-btn:hover {
+            background: linear-gradient(180deg, #2E3846 0%, #222B37 100%);
+        }
+        
+        .theme-active-nav { 
+            background: #1F2633; 
+            color: var(--silver-bright); 
+            border: 1px solid var(--border-active);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative">
+
+    <div id="web-loader">
+        <div class="flex items-center space-x-3 mb-2">
+            <span class="text-xl">🎛️</span>
+            <span class="text-xs font-bold tracking-widest uppercase text-[var(--silver-bright)]">YT MUSIC STUDIO — GRAPHITE WORKSTATION</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] font-medium tracking-wide">Đang khởi tạo trình điều khiển âm thanh...</div>
+        <div class="loader-bar">
+            <div class="loader-progress"></div>
+        </div>
+    </div>
+
+    <canvas id="dust-canvas"></canvas>
+
+    <div id="supportPopup" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="cinema-card w-[500px] rounded-2xl p-7 pt-9 relative space-y-4 text-center border-[var(--border-active)] shadow-2xl overflow-visible">
+            <div class="absolute -top-3.5 left-1/2 transform -translate-x-1/2 bg-[#1B2028] text-[var(--silver-bright)] border border-[var(--border-active)] px-4 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase whitespace-nowrap z-20 shadow-md">
+                ✨ LỜI NHẮN TỪ ADMIN
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-[var(--text-main)] tracking-wide">Cảm Ơn Bạn Đã Sử Dụng Dịch Vụ!</h3>
+                <p class="text-xs text-[var(--text-sub)] mt-2 leading-relaxed px-2 font-medium">
+                    Chào bạn, sự đồng hành và ủng hộ của bạn chính là nguồn động lực lớn giúp Admin duy trì, phát triển và nâng cấp các tính năng tối tân cho trạm điều khiển âm thanh này. Chúc bạn có những phút giây sáng tạo thăng hoa! 🚀
+                </p>
+            </div>
+            <div class="bg-[var(--bg-input)] p-4 rounded-xl border border-[var(--border-default)] flex flex-col items-center space-y-2">
+                <div class="w-36 h-36 bg-white rounded-xl p-2 border border-[var(--border-default)] flex items-center justify-center overflow-hidden">
+                    <img src="{{ url_for('static', filename='QR Code.jpg') }}" alt="QR Code Chuyển Khoản" class="w-full h-full object-contain">
+                </div>
+                <div class="text-[11px] text-[var(--text-sub)] font-medium">Quét mã QR để ủng hộ kinh phí duy trì trạm studio</div>
+            </div>
+            <button onclick="closeSupportPopup()" class="w-full h-11 theme-bg-btn font-bold rounded-xl text-xs tracking-wider transition-all cursor-pointer uppercase">
+                BẮT ĐẦU LÀM VIỆC NGAY
+            </button>
+        </div>
+    </div>
+
+    <div id="spotlight"></div>
+
+    {% if not logged_in %}
+    <div class="cinema-card w-[430px] rounded-2xl p-8 relative z-20 space-y-5">
+        <div class="text-center">
+            <h1 class="text-lg font-bold tracking-wider text-[var(--silver-bright)]">YT MUSIC STUDIO</h1>
+            <p class="text-[11px] text-[var(--text-muted)] mt-1 font-medium uppercase tracking-widest">Graphite & Silver Workstation</p>
+        </div>
+        <div class="space-y-3.5">
+            <input type="text" id="username" placeholder="Tên đăng nhập" class="w-full h-11 cinema-input rounded-xl px-4 text-xs font-medium focus:outline-none">
+            <input type="password" id="password" placeholder="Mật khẩu bảo mật" class="w-full h-11 cinema-input rounded-xl px-4 text-xs font-medium focus:outline-none">
+            <label class="flex items-center space-x-2 cursor-pointer text-xs text-[var(--text-sub)] font-medium">
+                <input type="checkbox" id="remember" checked class="accent-[var(--silver-primary)] w-3.5 h-3.5">
+                <span>Duy trì phiên đăng nhập (1 tuần)</span>
+            </label>
+        </div>
+        <div id="authMsg" class="text-xs text-center font-bold text-red-400 h-4"></div>
+        <div class="space-y-2.5">
+            <button onclick="handleLogin()" class="w-full h-11 theme-bg-btn font-bold rounded-xl text-xs tracking-wider transition-all cursor-pointer uppercase">ĐĂNG NHẬP HỆ THỐNG</button>
+            <button onclick="handleRegister()" class="w-full h-10 bg-[var(--bg-card)] hover:bg-[var(--bg-panel)] text-[var(--text-sub)] font-semibold text-xs rounded-xl border border-[var(--border-default)] transition-all cursor-pointer">Tạo tài khoản mới</button>
+        </div>
+    </div>
+    {% else %}
+    <div class="cinema-card w-[1260px] h-[720px] rounded-2xl relative z-25 flex flex-col overflow-hidden">
+        <div id="liquidShimmer" class="liquid-shimmer"></div>
+
+        <!-- TOP HEADER BAR -->
+        <div class="h-16 px-6 border-b border-[var(--border-default)] flex items-center justify-between bg-[var(--bg-main)] shrink-0 z-20">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-[var(--bg-card)] border border-[var(--border-active)] flex items-center justify-center text-sm">🎛️</div>
+                <div>
+                    <h1 class="text-xs font-bold tracking-wider text-[var(--silver-bright)] uppercase">YT MUSIC STUDIO</h1>
+                    <div class="text-[9px] text-[var(--text-muted)] font-semibold tracking-widest uppercase">Graphite & Silver Edition</div>
+                </div>
+            </div>
+
+            <!-- MENU TAB NGANG -->
+            <div class="flex items-center space-x-1.5 bg-[var(--bg-input)] p-1 rounded-xl border border-[var(--border-default)]">
+                <button onclick="switchTab('download')" id="nav-download" class="flex items-center space-x-2 px-3.5 py-2 rounded-lg font-bold text-xs transition-all theme-active-nav cursor-pointer">
+                    <span>⚡</span> <span>Tải Nhạc</span>
+                </button>
+                <button onclick="switchTab('browse')" id="nav-browse" class="flex items-center space-x-2 px-3.5 py-2 rounded-lg font-semibold text-xs text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer">
+                    <span>🌐</span> <span>Duyệt YouTube</span>
+                </button>
+                <button onclick="switchTab('analyzer')" id="nav-analyzer" class="flex items-center space-x-2 px-3.5 py-2 rounded-lg font-semibold text-xs text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer">
+                    <span>🎛️</span> <span>Tempo & Key</span>
+                </button>
+                <button onclick="switchTab('stems')" id="nav-stems" class="flex items-center space-x-2 px-3.5 py-2 rounded-lg font-semibold text-xs text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer">
+                    <span>🎧</span> <span>Tách Stems AI</span>
+                </button>
+                <button onclick="switchTab('history')" id="nav-history" class="flex items-center space-x-2 px-3.5 py-2 rounded-lg font-semibold text-xs text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer">
+                    <span>📜</span> <span>{% if is_admin %}Quản Lý Admin{% else %}Lịch Sử Tải{% endif %}</span>
+                </button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="flex items-center space-x-2 px-3.5 py-2 rounded-lg font-semibold text-xs text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer">
+                    <span>⚙️</span> <span>Cài Đặt</span>
+                </button>
+            </div>
+
+            <!-- USER INFO & SOCIAL SHORTCUTS -->
+            <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-1 bg-[var(--bg-card)] px-2 py-1 rounded-xl border border-[var(--border-default)]">
+                    <a id="headerFbLink" href="#" target="_blank" class="p-1 hover:text-[var(--silver-bright)] text-[var(--text-muted)] transition-all" title="Facebook Profile">📘</a>
+                    <a id="headerZaloLink" href="#" target="_blank" class="p-1 hover:text-[var(--silver-bright)] text-[var(--text-muted)] transition-all" title="Zalo Profile">💬</a>
+                    <a id="headerYtLink" href="#" target="_blank" class="p-1 hover:text-[var(--silver-bright)] text-[var(--text-muted)] transition-all" title="YouTube Channel">▶️</a>
+                    <a id="headerScLink" href="#" target="_blank" class="p-1 hover:text-[var(--silver-bright)] text-[var(--text-muted)] transition-all" title="SoundCloud Profile">☁️</a>
+                </div>
+
+                <div class="flex items-center space-x-2.5 bg-[var(--bg-card)] pl-2.5 pr-3.5 py-1 rounded-xl border border-[var(--border-default)]">
+                    <div class="w-7 h-7 rounded-lg bg-[var(--bg-input)] border border-[var(--border-active)] overflow-hidden flex items-center justify-center">
+                        <img id="sidebarAvatar" src="{{ url_for('static', filename='uploads/' + avatar) if avatar and avatar != 'default_avatar.png' else 'https://api.dicebear.com/7.x/bottts/svg?seed=' + user }}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="text-left">
+                        <div class="text-xs font-bold text-[var(--text-main)] truncate max-w-[90px]">👤 {{ user }}</div>
+                        <div class="text-[9px] text-[var(--text-muted)] font-bold uppercase">
+                            {% if is_admin %}Admin{% else %}Member{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="text-xs text-[var(--text-sub)] hover:text-red-400 font-bold p-2 bg-[var(--bg-card)] hover:bg-[var(--bg-panel)] rounded-xl border border-[var(--border-default)] cursor-pointer transition-all" title="Đăng Xuất">🚪</button>
+            </div>
+        </div>
+
+        <!-- MAIN WORKSPACE -->
+        <div class="flex-1 p-7 flex flex-col justify-between overflow-y-auto relative z-10">
+            
+            <!-- TAB 1: TẢI NHẠC -->
+            <div id="tab-download" class="tab-content active space-y-5 my-auto flex-col">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-[var(--silver-bright)] mb-0.5 tracking-tight">TRẠM ĐIỀU KHIỂN TẢI NHẠC</h2>
+                        <p class="text-xs text-[var(--text-sub)] font-medium">Trích xuất âm thanh chất lượng cao từ YouTube sang định dạng WAV Lossless chuẩn Studio.</p>
+                    </div>
+                    <div class="px-3.5 py-1.5 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-lg text-[var(--silver-primary)] text-[11px] font-semibold">
+                        Workstation Engine Ready
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-5">
+                    <div class="col-span-8 cinema-panel p-5 rounded-2xl space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold tracking-widest text-[var(--text-muted)] mb-2 uppercase">ĐƯỜNG DẪN YOUTUBE (URL)</label>
+                            <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." class="w-full h-11 cinema-input rounded-xl px-4 text-xs font-medium focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold tracking-widest text-[var(--text-muted)] mb-2 uppercase">THƯ MỤC LƯU TRỮ ĐÍCH</label>
+                            <div class="flex items-center space-x-3">
+                                <button onclick="selectFolderDialog()" class="h-11 px-5 bg-[var(--bg-input)] hover:bg-[var(--bg-card)] border border-[var(--border-default)] text-[var(--silver-bright)] font-semibold text-xs rounded-xl transition-all cursor-pointer shrink-0">
+                                    📁 Chọn Thư Mục
+                                </button>
+                                <span id="pathDisplay" class="text-xs text-[var(--text-sub)] font-medium truncate flex-1 bg-[var(--bg-input)] px-4 py-3 rounded-xl border border-[var(--border-default)]">{{ path }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-4 cinema-panel p-5 rounded-2xl flex flex-col justify-between space-y-3">
+                        <div>
+                            <label class="block text-[10px] font-bold tracking-widest text-[var(--text-muted)] mb-2.5 uppercase">ĐỊNH DẠNG ÂM THANH</label>
+                            <div class="space-y-2.5">
+                                <label class="flex items-center justify-between p-3 bg-[var(--bg-input)] rounded-xl border border-[var(--border-default)] cursor-pointer hover:border-[var(--border-active)] transition-all">
+                                    <div class="flex items-center space-x-2.5">
+                                        <input type="radio" name="format" value="wav" checked class="accent-[var(--silver-primary)] w-3.5 h-3.5">
+                                        <span class="text-xs font-semibold text-[var(--text-main)]">WAV Lossless Master</span>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-[var(--silver-bright)] px-2 py-0.5 rounded bg-[var(--bg-card)] border border-[var(--border-active)]">Raw Studio</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="spaceDisplay" class="text-xs font-semibold text-[var(--silver-bright)] bg-[var(--bg-input)] p-3 rounded-xl border border-[var(--border-default)] text-center">
+                            💾 Ổ ({{ space.drive }}) — Trống: {{ space.free }} / {{ space.total }}
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <button onclick="startDownload()" id="downloadBtn" class="w-full h-12 theme-bg-btn font-bold rounded-xl text-xs tracking-wider transition-all cursor-pointer uppercase shadow-sm">
+                        ⚡ BẮT ĐẦU TRÍCH XUẤT ÂM THANH NGAY
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 2: DUYỆT YOUTUBE -->
+            <div id="tab-browse" class="tab-content space-y-4 my-auto flex-col">
+                <div>
+                    <h2 class="text-xl font-bold text-[var(--silver-bright)] mb-0.5 tracking-tight">DUYỆT YOUTUBE WORKSTATION</h2>
+                    <p class="text-xs text-[var(--text-sub)] font-medium">Tìm kiếm bài hát, nghệ sĩ và trích xuất nhanh chóng.</p>
+                </div>
+                <div class="flex space-x-3">
+                    <input type="text" id="ytSearchInput" placeholder="Nhập tên bài hát hoặc nghệ sĩ..." class="flex-1 h-11 cinema-input rounded-xl px-4 text-xs font-medium focus:outline-none" onkeypress="if(event.key === 'Enter') searchYouTube()">
+                    <button onclick="searchYouTube()" class="h-11 px-6 theme-bg-btn font-bold text-xs rounded-xl cursor-pointer uppercase">🔍 Tìm Kiếm</button>
+                </div>
+                <div id="ytSearchResults" class="cinema-panel rounded-2xl p-4 h-[390px] overflow-y-auto space-y-2.5">
+                    <div class="text-center py-28 text-[var(--text-muted)] text-xs font-medium">Hãy nhập từ khóa để tìm kiếm nội dung trên YouTube.</div>
+                </div>
+            </div>
+
+            <!-- TAB 3: PHÂN TÍCH TEMPO & KEY -->
+            <div id="tab-analyzer" class="tab-content space-y-5 my-auto flex-col">
+                <div>
+                    <h2 class="text-xl font-bold text-[var(--silver-bright)] mb-0.5 tracking-tight">PHÂN TÍCH TEMPO & KEY</h2>
+                    <p class="text-xs text-[var(--text-sub)] font-medium">Tải lên tệp âm thanh (WAV) để AI quét nhịp độ BPM và tông giọng.</p>
+                </div>
+                <div class="cinema-panel border-2 border-dashed border-[var(--border-default)] rounded-2xl p-7 text-center space-y-3.5">
+                    <div class="text-3xl">🎚️</div>
+                    <div>
+                        <div id="audioFileName" class="text-xs font-bold text-[var(--text-main)]">Chọn tệp nhạc mẫu của bạn (.wav)</div>
+                        <div class="text-[10px] text-[var(--text-muted)] mt-1 font-medium">Librosa Audio Analyzer Engine</div>
+                    </div>
+                    <input type="file" id="audioFileInput" accept="audio/*" class="hidden" onchange="updateAudioFileName()">
+                    <button onclick="document.getElementById('audioFileInput').click()" class="px-5 py-2.5 bg-[var(--bg-input)] hover:bg-[var(--bg-card)] text-[var(--silver-bright)] font-semibold text-xs rounded-xl border border-[var(--border-default)] cursor-pointer transition-all">📂 Chọn Tệp Âm Thanh</button>
+                </div>
+                <div class="grid grid-cols-2 gap-5">
+                    <div class="cinema-panel p-5 rounded-2xl text-center space-y-1.5">
+                        <div class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Tốc Độ Nhịp (Tempo)</div>
+                        <div id="resultBpm" class="text-3xl font-bold text-[var(--silver-bright)]">--- <span class="text-xs font-semibold text-[var(--text-muted)]">BPM</span></div>
+                    </div>
+                    <div class="cinema-panel p-5 rounded-2xl text-center space-y-1.5">
+                        <div class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Tông Âm (Key)</div>
+                        <div id="resultKey" class="text-2xl font-bold text-[var(--silver-primary)]">---</div>
+                    </div>
+                </div>
+                <div>
+                    <button onclick="analyzeAudioFile()" id="analyzeBtn" class="w-full h-11 theme-bg-btn font-bold rounded-xl text-xs tracking-wider transition-all cursor-pointer uppercase">⚡ BẮT ĐẦU PHÂN TÍCH ÂM THANH</button>
+                </div>
+            </div>
+
+            <!-- TAB 4: TÁCH STEMS AI -->
+            <div id="tab-stems" class="tab-content space-y-5 my-auto flex-col">
+                <div>
+                    <h2 class="text-xl font-bold text-[var(--silver-bright)] mb-0.5 tracking-tight">TÁCH STEMS AI (VOCAL & INSTRUMENTAL)</h2>
+                    <p class="text-xs text-[var(--text-sub)] font-medium">Tách rời giọng hát (Vocals) và nhạc cụ (Beat/Instrumental) chuẩn Studio bằng mô hình AI.</p>
+                </div>
+
+                <div class="grid grid-cols-12 gap-5">
+                    <div class="col-span-7 cinema-panel p-5 rounded-2xl space-y-4">
+                        <div class="border-2 border-dashed border-[var(--border-default)] rounded-xl p-5 text-center space-y-2.5">
+                            <div class="text-2xl">🎧</div>
+                            <div id="stemFileName" class="text-xs font-bold text-[var(--text-main)]">Chọn tệp bài hát cần tách stems (.wav)</div>
+                            <input type="file" id="stemFileInput" accept="audio/*" class="hidden" onchange="updateStemFileName()">
+                            <button onclick="document.getElementById('stemFileInput').click()" class="px-4 py-2 bg-[var(--bg-input)] hover:bg-[var(--bg-card)] text-[var(--silver-bright)] font-semibold text-xs rounded-lg border border-[var(--border-default)] cursor-pointer">📂 Chọn Tệp Nhạc</button>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold tracking-widest text-[var(--text-muted)] mb-2 uppercase">MÔ HÌNH TÁCH STEMS</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="flex items-center space-x-2.5 p-2.5 bg-[var(--bg-input)] rounded-xl border border-[var(--border-default)] cursor-pointer">
+                                    <input type="radio" name="stemModel" value="2stems" checked class="accent-[var(--silver-primary)] w-3.5 h-3.5">
+                                    <span class="text-xs font-semibold text-[var(--text-main)]">Vocals + Instrumental</span>
+                                </label>
+                                <label class="flex items-center space-x-2.5 p-2.5 bg-[var(--bg-input)] rounded-xl border border-[var(--border-default)] cursor-pointer">
+                                    <input type="radio" name="stemModel" value="4stems" class="accent-[var(--silver-primary)] w-3.5 h-3.5">
+                                    <span class="text-xs font-semibold text-[var(--text-main)]">Vocals, Drums, Bass, Other</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-5 cinema-panel p-5 rounded-2xl flex flex-col justify-between space-y-3">
+                        <div class="space-y-2">
+                            <div class="text-[10px] font-bold text-[var(--text-muted)] tracking-widest uppercase">KẾT QUẢ TÁCH STEMS</div>
+                            <div id="stemResultContainer" class="bg-[var(--bg-input)] rounded-xl p-4 h-[150px] flex items-center justify-center text-center text-xs text-[var(--text-muted)] border border-[var(--border-default)] overflow-y-auto">
+                                Chưa có tệp nào được xử lý.
+                            </div>
+                        </div>
+
+                        <button onclick="startStemSeparation()" id="stemBtn" class="w-full h-11 theme-bg-btn font-bold rounded-xl text-xs tracking-wider transition-all cursor-pointer uppercase">
+                            ⚡ BẮT ĐẦU TÁCH STEMS AI
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: LỊCH SỬ & QUẢN TRỊ ADMIN -->
+            <div id="tab-history" class="tab-content space-y-4 my-auto flex-col">
+                <div>
+                    <h2 class="text-xl font-bold text-[var(--silver-bright)] mb-0.5 tracking-tight">{% if is_admin %}🛡️ QUẢN LÝ HỆ THỐNG & GIÁM SÁT{% else %}LỊCH SỬ TẢI XUỐNG{% endif %}</h2>
+                    <p class="text-xs text-[var(--text-sub)] font-medium">{% if is_admin %}Quản lý tài khoản người dùng và giám sát hoạt động tải nhạc.{% else %}Danh sách các tệp âm thanh bạn đã trích xuất từ hệ thống.{% endif %}</p>
+                </div>
+                {% if is_admin %}
+                <div class="flex space-x-2.5 border-b border-[var(--border-default)] pb-2.5">
+                    <button onclick="switchAdminSubTab('logs')" id="subnav-logs" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-[var(--bg-card)] text-[var(--silver-bright)] border border-[var(--border-active)] cursor-pointer">📜 Giám Sát Hoạt Động</button>
+                    <button onclick="switchAdminSubTab('users')" id="subnav-users" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[var(--bg-input)] text-[var(--text-sub)] hover:text-[var(--text-main)] border border-[var(--border-default)] cursor-pointer">👥 Quản Lý Tài Khoản</button>
+                </div>
+                {% endif %}
+                <div class="cinema-panel rounded-2xl p-4 h-[360px] overflow-y-auto">
+                    <div id="admin-subtab-logs">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-[var(--border-default)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                                    {% if is_admin %}<th class="pb-2.5">TÀI KHOẢN</th>{% endif %}
+                                    <th class="pb-2.5">TÊN BÀI HÁT / TỆP</th>
+                                    <th class="pb-2.5">ĐỊNH DẠNG</th>
+                                    <th class="pb-2.5">THỜI GIAN</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody" class="text-xs text-[var(--text-sub)] font-medium">
+                                <tr><td colspan="4" class="text-center py-10 text-[var(--text-muted)]">Đang tải dữ liệu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if is_admin %}
+                    <div id="admin-subtab-users" class="hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-[var(--border-default)] text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                                    <th class="pb-2.5">TÊN TÀI KHOẢN</th>
+                                    <th class="pb-3">VAI TRÒ</th>
+                                    <th class="pb-3 text-right">THAO TÁC</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="text-xs text-[var(--text-sub)] font-medium">
+                                <tr><td colspan="3" class="text-center py-10 text-[var(--text-muted)]">Đang tải danh sách tài khoản...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- TAB 6: CÀI ĐẶT & SOCIAL PROFILE LINKS -->
+            <div id="tab-settings" class="tab-content space-y-5 my-auto flex-col">
+                <div>
+                    <h2 class="text-xl font-bold text-[var(--silver-bright)] mb-0.5 tracking-tight">CÀI ĐẶT HỆ THỐNG & HỒ SƠ</h2>
+                    <p class="text-xs text-[var(--text-sub)] font-medium">Quản lý tài khoản, liên kết trang cá nhân và tùy chỉnh hệ thống.</p>
+                </div>
+
+                <div class="grid grid-cols-12 gap-5">
+                    <div class="col-span-5 cinema-panel p-5 rounded-2xl space-y-3.5">
+                        <div class="text-[10px] font-bold text-[var(--text-muted)] tracking-widest uppercase">👤 TÀI KHOẢN & ẢNH ĐẠI DIỆN</div>
+                        <div class="flex items-center space-x-4">
+                            <div class="w-14 h-14 rounded-xl bg-[var(--bg-input)] border border-[var(--border-active)] overflow-hidden flex items-center justify-center">
+                                <img id="mainAvatar" src="{{ url_for('static', filename='uploads/' + avatar) if avatar and avatar != 'default_avatar.png' else 'https://api.dicebear.com/7.x/bottts/svg?seed=' + user }}" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-[var(--text-main)]">{{ user }} {% if is_admin %}<span class="text-[9px] bg-[var(--bg-input)] text-[var(--silver-primary)] px-2 py-0.5 rounded border border-[var(--border-default)]">ADMIN</span>{% endif %}</div>
+                                <input type="file" id="avatarInput" accept="image/*" class="hidden" onchange="uploadAvatar()">
+                                <button onclick="document.getElementById('avatarInput').click()" class="mt-2 h-7 px-3 bg-[var(--bg-input)] hover:bg-[var(--bg-card)] text-[var(--silver-bright)] font-semibold text-[10px] rounded-lg border border-[var(--border-default)] cursor-pointer transition-all">
+                                    📷 Đổi Avatar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-7 cinema-panel p-5 rounded-2xl space-y-3">
+                        <div class="text-[10px] font-bold text-[var(--text-muted)] tracking-widest uppercase flex justify-between items-center">
+                            <span>🌐 LIÊN KẾT PROFILE CÁ NHÂN (ARTIST LINKS)</span>
+                            <button onclick="saveSocialLinks()" class="text-[10px] bg-[var(--bg-input)] hover:bg-[var(--bg-card)] text-[var(--silver-bright)] px-2.5 py-1 rounded-md border border-[var(--border-default)] transition-all cursor-pointer">💾 Lưu Liên Kết</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5 text-xs">
+                            <div>
+                                <label class="block text-[10px] text-[var(--text-sub)] mb-1">Facebook URL</label>
+                                <input type="text" id="inputFb" placeholder="https://facebook.com/..." class="w-full h-8 cinema-input rounded-lg px-3 text-[11px]" value="https://www.facebook.com/gia.bao.452543/?locale=vi_VN">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-[var(--text-sub)] mb-1">Zalo Link / SĐT</label>
+                                <input type="text" id="inputZalo" placeholder="https://zalo.me/..." class="w-full h-8 cinema-input rounded-lg px-3 text-[11px]" value="0586913382">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-[var(--text-sub)] mb-1">YouTube Channel URL</label>
+                                <input type="text" id="inputYt" placeholder="https://youtube.com/@..." class="w-full h-8 cinema-input rounded-lg px-3 text-[11px]" value="https://www.youtube.com/@JEWELSREMIX09">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-[var(--text-sub)] mb-1">SoundCloud URL</label>
+                                <input type="text" id="inputSc" placeholder="https://soundcloud.com/..." class="w-full h-8 cinema-input rounded-lg px-3 text-[11px]" value="https://soundcloud.com/gbao-remix">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cinema-panel p-4 rounded-2xl space-y-1">
+                    <div class="text-[10px] font-bold text-[var(--text-muted)] tracking-widest uppercase">ℹ️ THÔNG TIN PHẦN MỀM</div>
+                    <div class="text-xs text-[var(--text-sub)] font-medium">
+                        <strong>YT Music Studio v7.3 WAV Lossless Edition</strong> — Tích hợp trích xuất âm thanh WAV và tách stems chuyên nghiệp.
+                    </div>
+                </div>
+            </div>
+
+            <!-- THANH TRẠNG THÁI STATUS BAR -->
+            <div id="statusText" class="text-center text-xs font-semibold text-[var(--text-sub)] cinema-panel py-3 rounded-xl border border-[var(--border-default)] mt-3 shrink-0">
+                Hệ thống sẵn sàng nhận nhiệm vụ âm nhạc.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('web-loader');
+                if (loader) {
+                    loader.classList.add('loaded');
+                    setTimeout(() => loader.remove(), 800);
+                }
+                const popup = document.getElementById('supportPopup');
+                if (popup) {
+                    popup.classList.add('show');
+                }
+            }, 1000);
+            loadSocialLinks();
+        });
+
+        const canvas = document.getElementById('dust-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const particleCount = 25;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                radius: Math.random() * 1.2 + 0.3,
+                speedX: (Math.random() - 0.5) * 0.05,
+                speedY: (Math.random() - 0.5) * 0.05,
+                opacity: Math.random() * 0.15 + 0.03
+            });
+        }
+
+        function animateSpace() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.x += p.speedX;
+                p.y += p.speedY;
+
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(195, 202, 212, ${p.opacity})`;
+                ctx.fill();
+            });
+            requestAnimationFrame(animateSpace);
+        }
+        animateSpace();
+
+        function closeSupportPopup() {
+            const popup = document.getElementById('supportPopup');
+            if (popup) {
+                popup.classList.remove('show');
+            }
+        }
+
+        const spotlight = document.getElementById('spotlight');
+        window.addEventListener('mousemove', (e) => {
+            if (spotlight) {
+                spotlight.style.left = `${e.clientX}px`;
+                spotlight.style.top = `${e.clientY}px`;
+            }
+        });
+
+        function switchTab(tabName) {
+            const shimmer = document.getElementById('liquidShimmer');
+            if (shimmer) {
+                shimmer.classList.remove('active');
+                void shimmer.offsetWidth;
+                shimmer.classList.add('active');
+            }
+
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            const targetTab = document.getElementById(`tab-${tabName}`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+
+            ['download', 'browse', 'analyzer', 'stems', 'history', 'settings'].forEach(t => {
+                const btn = document.getElementById(`nav-${t}`);
+                if (btn) {
+                    if (t === tabName) {
+                        btn.className = "flex items-center space-x-2 px-3.5 py-2 rounded-lg font-bold text-xs transition-all theme-active-nav cursor-pointer";
+                    } else {
+                        btn.className = "flex items-center space-x-2 px-3.5 py-2 rounded-lg font-semibold text-xs text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] transition-all cursor-pointer";
+                    }
+                }
+            });
+
+            if (tabName === 'history') {
+                fetchHistory();
+            }
+        }
+
+        function updateStemFileName() {
+            const input = document.getElementById('stemFileInput');
+            const display = document.getElementById('stemFileName');
+            if (input.files && input.files[0]) {
+                display.innerText = `📄 Đã chọn: ${input.files[0].name}`;
+                display.style.color = "var(--silver-bright)";
+            }
+        }
+
+        function startStemSeparation() {
+            const input = document.getElementById('stemFileInput');
+            const container = document.getElementById('stemResultContainer');
+            const statusText = document.getElementById('statusText');
+            const btn = document.getElementById('stemBtn');
+
+            if (!input.files || !input.files[0]) {
+                alert("⚠️ Vui lòng chọn tệp âm thanh trước khi tách Stems!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio', input.files[0]);
+            const modelType = document.querySelector('input[name="stemModel"]:checked').value;
+            formData.append('model', modelType);
+
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
+            statusText.innerText = "🚀 AI Stems Engine đang xử lý tách Vocals & Instrumental (Quá trình này mất vài giây)...";
+            statusText.style.color = "var(--silver-bright)";
+            container.innerHTML = `<div class="text-xs text-[var(--silver-bright)] animate-pulse">⏳ Đang xử lý tách phổ âm thanh AI thực tế...</div>`;
+
+            fetch('/separate_audio', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    statusText.innerText = "✨ Tách Stems AI hoàn tất thành công!";
+                    statusText.style.color = "var(--silver-bright)";
+                    
+                    let html = `<div class="space-y-2 w-full text-left">`;
+                    if (data.stems && data.stems.length > 0) {
+                        data.stems.forEach(stem => {
+                            html += `
+                                <div class="flex items-center justify-between bg-[var(--bg-card)] px-3 py-1.5 rounded-lg border border-[var(--border-default)]">
+                                    <span class="text-xs font-bold text-[var(--text-main)] truncate max-w-[140px]">🎵 ${stem.name}</span>
+                                    <a href="${stem.url}" download class="text-[11px] text-[var(--silver-bright)] bg-[var(--bg-input)] px-2.5 py-1 rounded border border-[var(--border-default)] underline hover:text-white font-bold shrink-0">Tải xuống</a>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += `<div class="text-xs text-[var(--silver-bright)]">✨ Đã tách thành công!</div>`;
+                    }
+                    html += `</div>`;
+                    container.innerHTML = html;
+                } else {
+                    alert(`❌ Lỗi: ${data.message}`);
+                    statusText.innerText = "⚠️ Tách Stems thất bại.";
+                    container.innerHTML = `<div class="text-xs text-red-400">⚠️ Xử lý thất bại.</div>`;
+                }
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            })
+            .catch(err => {
+                alert("⚠️ Lỗi kết nối máy chủ tách Stems.");
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                container.innerHTML = `<div class="text-xs text-red-400">⚠️ Lỗi kết nối máy chủ.</div>`;
+            });
+        }
+
+        function saveSocialLinks() {
+            const fb = document.getElementById('inputFb').value.trim();
+            const zalo = document.getElementById('inputZalo').value.trim();
+            const yt = document.getElementById('inputYt').value.trim();
+            const sc = document.getElementById('inputSc').value.trim();
+
+            const links = { fb, zalo, yt, sc };
+            localStorage.setItem('user_social_links', JSON.stringify(links));
+            applySocialLinks(links);
+            alert('✨ Đã lưu các liên kết Profile thành công!');
+        }
+
+        function loadSocialLinks() {
+            const saved = localStorage.getItem('user_social_links');
+            let links = saved ? JSON.parse(saved) : {
+                fb: "https://www.facebook.com/gia.bao.452543/?locale=vi_VN",
+                zalo: "0586913382",
+                yt: "https://www.youtube.com/@JEWELSREMIX09",
+                sc: "https://soundcloud.com/gbao-remix"
+            };
+            if (document.getElementById('inputFb')) document.getElementById('inputFb').value = links.fb || '';
+            if (document.getElementById('inputZalo')) document.getElementById('inputZalo').value = links.zalo || '';
+            if (document.getElementById('inputYt')) document.getElementById('inputYt').value = links.yt || '';
+            if (document.getElementById('inputSc')) document.getElementById('inputSc').value = links.sc || '';
+            applySocialLinks(links);
+        }
+
+        function applySocialLinks(links) {
+            if (document.getElementById('headerFbLink')) document.getElementById('headerFbLink').href = links.fb || '#';
+            if (document.getElementById('headerZaloLink')) document.getElementById('headerZaloLink').href = links.zalo.startsWith('http') ? links.zalo : `https://zalo.me/${links.zalo}`;
+            if (document.getElementById('headerYtLink')) document.getElementById('headerYtLink').href = links.yt || '#';
+            if (document.getElementById('headerScLink')) document.getElementById('headerScLink').href = links.sc || '#';
+        }
+
+        function updateAudioFileName() {
+            const input = document.getElementById('audioFileInput');
+            const fileNameDisplay = document.getElementById('audioFileName');
+            if (input.files && input.files[0]) {
+                fileNameDisplay.innerText = `📄 Đã chọn: ${input.files[0].name}`;
+                fileNameDisplay.style.color = "var(--silver-bright)";
+            } else {
+                fileNameDisplay.innerText = "Chọn tệp nhạc mẫu của bạn (.wav)";
+                fileNameDisplay.style.color = "";
+            }
+        }
+
+        function analyzeAudioFile() {
+            const input = document.getElementById('audioFileInput');
+            const statusText = document.getElementById('statusText');
+            const btn = document.getElementById('analyzeBtn');
+
+            if (!input.files || !input.files[0]) {
+                alert("⚠️ Vui lòng chọn một tệp âm thanh trước khi phân tích!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('audio', input.files[0]);
+
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
+            statusText.innerText = "🚀 Librosa Engine đang quét phổ tần số, tính toán Tempo và Key...";
+            statusText.style.color = "var(--silver-bright)";
+
+            fetch('/analyze_audio', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('resultBpm').innerHTML = `${data.bpm} <span class="text-xs font-semibold text-[var(--text-muted)]">BPM</span>`;
+                    document.getElementById('resultKey').innerText = data.key;
+                    statusText.innerText = "✨ Phân tích âm thanh hoàn tất!";
+                    statusText.style.color = "var(--silver-bright)";
+                } else {
+                    alert(`❌ Lỗi: ${data.message}`);
+                    statusText.innerText = "⚠️ Phân tích thất bại.";
+                }
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            })
+            .catch(err => {
+                alert("⚠️ Lỗi kết nối máy chủ phân tích.");
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            });
+        }
+
+        function switchAdminSubTab(sub) {
+            const logsDiv = document.getElementById('admin-subtab-logs');
+            const usersDiv = document.getElementById('admin-subtab-users');
+            const btnLogs = document.getElementById('subnav-logs');
+            const btnUsers = document.getElementById('subnav-users');
+
+            if (sub === 'logs') {
+                logsDiv.classList.remove('hidden');
+                usersDiv.classList.add('hidden');
+                btnLogs.className = "px-4 py-1.5 rounded-lg text-xs font-bold bg-[var(--bg-card)] text-[var(--silver-bright)] border border-[var(--border-active)] cursor-pointer";
+                btnUsers.className = "px-4 py-1.5 rounded-lg text-xs font-semibold bg-[var(--bg-input)] text-[var(--text-sub)] hover:text-[var(--text-main)] border border-[var(--border-default)] cursor-pointer";
+            } else {
+                logsDiv.classList.add('hidden');
+                usersDiv.classList.remove('hidden');
+                btnUsers.className = "px-4 py-1.5 rounded-lg text-xs font-bold bg-[var(--bg-card)] text-[var(--silver-bright)] border border-[var(--border-active)] cursor-pointer";
+                btnLogs.className = "px-4 py-1.5 rounded-lg text-xs font-semibold bg-[var(--bg-input)] text-[var(--text-sub)] hover:text-[var(--text-main)] border border-[var(--border-default)] cursor-pointer";
+                fetchAdminUsers();
+            }
+        }
+
+        function fetchAdminUsers() {
+            fetch('/get_admin_data')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const tbody = document.getElementById('usersTableBody');
+                    tbody.innerHTML = data.users.map(u => `
+                        <tr class="border-b border-[var(--border-default)] hover:bg-[var(--bg-card)]">
+                            <td class="py-3 font-bold text-[var(--text-main)]">👤 ${u.username}</td>
+                            <td class="py-3">
+                                ${u.is_admin ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-input)] text-[var(--silver-primary)] border border-[var(--border-active)]">Quản Trị Viên</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--bg-input)] text-[var(--text-muted)] border border-[var(--border-default)]">Thành Viên</span>'}
+                            </td>
+                            <td class="py-3 text-right">
+                                ${u.username.toLowerCase() !== 'admin' ? (
+                                    u.is_admin ? 
+                                    `<button onclick="toggleAdmin('${u.username}', 0)" class="px-3 py-1 bg-[var(--bg-input)] hover:bg-[var(--bg-card)] text-red-400 rounded-lg text-[11px] font-semibold border border-[var(--border-default)] cursor-pointer">Tước Quyền</button>` :
+                                    `<button onclick="toggleAdmin('${u.username}', 1)" class="px-3 py-1 bg-[var(--bg-input)] hover:bg-[var(--bg-card)] text-[var(--silver-bright)] rounded-lg text-[11px] font-semibold border border-[var(--border-active)] cursor-pointer">Cấp Quyền</button>`
+                                ) : '<span class="text-[11px] text-[var(--text-muted)] italic">Master Root</span>'}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            });
+        }
+
+        function toggleAdmin(username, status) {
+            fetch('/toggle_admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, is_admin: status })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    fetchAdminUsers();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function searchYouTube() {
+            const query = document.getElementById('ytSearchInput').value.trim();
+            const resultsContainer = document.getElementById('ytSearchResults');
+
+            if (!query) return;
+
+            resultsContainer.innerHTML = `<div class="text-center py-20 text-[var(--text-sub)] text-xs font-medium">🚀 Đang tìm kiếm trên YouTube Engine...</div>`;
+
+            fetch('/search_yt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success' && data.results && data.results.length > 0) {
+                    let htmlContent = '';
+                    data.results.forEach(item => {
+                        if (item.is_channel) {
+                            htmlContent += `
+                                <div class="flex items-center justify-between bg-[var(--bg-input)] p-3 rounded-xl border border-[var(--border-default)] hover:border-[var(--border-active)] transition-all">
+                                    <div class="flex items-center space-x-3 overflow-hidden">
+                                        <div class="w-10 h-10 rounded-xl bg-[var(--bg-card)] border border-[var(--border-active)] overflow-hidden flex items-center justify-center shrink-0">
+                                            <img src="${item.thumbnail}" class="w-full h-full object-cover">
+                                        </div>
+                                        <div class="truncate">
+                                            <div class="text-xs font-bold text-[var(--silver-bright)] truncate">🎵 Kênh Nghệ Sĩ: ${item.title}</div>
+                                            <div class="text-[10px] text-[var(--text-muted)] mt-0.5 font-medium">Xác thực chính thức từ YouTube</div>
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0 ml-3">
+                                        <a href="${item.url}" target="_blank" class="px-3.5 py-1.5 bg-[var(--bg-card)] hover:bg-[var(--bg-panel)] text-[var(--text-main)] rounded-lg text-xs font-semibold border border-[var(--border-default)] cursor-pointer">
+                                            ▶ Mở YouTube
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            htmlContent += `
+                                <div class="flex items-center justify-between bg-[var(--bg-input)] p-3 rounded-xl border border-[var(--border-default)] hover:border-[var(--border-active)] transition-all">
+                                    <div class="flex items-center space-x-3 overflow-hidden">
+                                        <img src="${item.thumbnail}" class="w-20 h-11 object-cover rounded-lg border border-[var(--border-default)] shrink-0">
+                                        <div class="truncate">
+                                            <div class="text-xs font-bold text-[var(--text-main)] truncate">${item.title}</div>
+                                            <div class="text-[10px] text-[var(--text-muted)] mt-0.5 font-medium">Kênh: ${item.uploader} ${item.duration ? '• ' + item.duration : ''}</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 shrink-0 ml-3">
+                                        <button onclick="sendToDownload('${item.url}')" class="px-3.5 py-1.5 bg-[var(--bg-card)] text-[var(--silver-bright)] border border-[var(--border-active)] rounded-lg text-[11px] font-bold hover:bg-[var(--bg-panel)] cursor-pointer">
+                                            ⚡ Tải Nhạc
+                                        </button>
+                                        <a href="${item.url}" target="_blank" class="px-3.5 py-1.5 bg-[var(--bg-card)] hover:bg-[var(--bg-panel)] text-[var(--text-sub)] rounded-lg text-[11px] font-semibold border border-[var(--border-default)] cursor-pointer">
+                                            ▶ Mở YouTube
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                    resultsContainer.innerHTML = htmlContent;
+                } else {
+                    resultsContainer.innerHTML = `<div class="text-center py-20 text-[var(--text-muted)] text-xs font-medium">Không tìm thấy kết quả phù hợp.</div>`;
+                }
+            })
+            .catch(err => {
+                resultsContainer.innerHTML = `<div class="text-center py-20 text-red-400 text-xs font-medium">⚠️ Lỗi kết nối máy chủ tìm kiếm.</div>`;
+            });
+        }
+
+        function sendToDownload(url) {
+            document.getElementById('urlInput').value = url;
+            switchTab('download');
+            document.getElementById('statusText').innerText = "✨ Đã nạp đường dẫn thành công! Bấm bắt đầu tải xuống ngay.";
+            document.getElementById('statusText').style.color = "var(--silver-bright)";
+        }
+
+        function fetchHistory() {
+            fetch('/get_history')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('historyTableBody');
+                if (data.status === 'success' && data.history && data.history.length > 0) {
+                    let rowsHtml = '';
+                    data.history.forEach(item => {
+                        if (data.is_admin) {
+                            rowsHtml += `
+                                <tr class="border-b border-[var(--border-default)] hover:bg-[var(--bg-card)]">
+                                    <td class="py-3 font-bold text-[var(--silver-bright)]">👤 ${item.user}</td>
+                                    <td class="py-3 font-semibold text-[var(--text-main)] truncate max-w-[280px]">${item.title}</td>
+                                    <td class="py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-input)] text-[var(--text-sub)] border border-[var(--border-default)]">${item.format}</span></td>
+                                    <td class="py-3 text-[var(--text-muted)] text-[11px] font-medium">${item.time}</td>
+                                </tr>
+                            `;
+                        } else {
+                            rowsHtml += `
+                                <tr class="border-b border-[var(--border-default)] hover:bg-[var(--bg-card)]">
+                                    <td class="py-3 font-semibold text-[var(--text-main)] truncate max-w-[380px]">${item.title}</td>
+                                    <td class="py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-input)] text-[var(--silver-bright)] border border-[var(--border-default)]">${item.format}</span></td>
+                                    <td class="py-3 text-[var(--text-muted)] text-[11px] font-medium">${item.time}</td>
+                                </tr>
+                            `;
+                        }
+                    });
+                    tbody.innerHTML = rowsHtml;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="${data.is_admin ? 4 : 3}" class="text-center py-10 text-[var(--text-muted)] font-medium">Chưa có hoạt động nào được ghi nhận.</td></tr>`;
+                }
+            });
+        }
+
+        let currentPath = "{{ path if logged_in else '' }}";
+
+        function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const remember = document.getElementById('remember').checked;
+            const msg = document.getElementById('authMsg');
+
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, remember })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                } else {
+                    msg.innerText = data.message;
+                }
+            });
+        }
+
+        function handleRegister() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const msg = document.getElementById('authMsg');
+
+            fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                msg.style.color = data.status === 'success' ? 'var(--silver-bright)' : 'red';
+                msg.innerText = data.message;
+            });
+        }
+
+        function handleLogout() {
+            fetch('/logout', { method: 'POST' }).then(() => location.reload());
+        }
+
+        function selectFolderDialog() {
+            fetch('/browse', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    currentPath = data.path;
+                    document.getElementById('pathDisplay').innerText = data.path;
+                    document.getElementById('spaceDisplay').innerText = `💾 Ổ (${data.space.drive}) — Trống: ${data.space.free} / ${data.space.total}`;
+                }
+            });
+        }
+
+        function startDownload() {
+            const url = document.getElementById('urlInput').value.trim();
+            const format = 'wav';
+            const statusText = document.getElementById('statusText');
+            const btn = document.getElementById('downloadBtn');
+
+            if (!url) {
+                statusText.innerText = "⚠️ Vui lòng nhập đường dẫn YouTube hợp lệ!";
+                statusText.style.color = "red";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
+            statusText.innerText = "🚀 Đang trích xuất tệp âm thanh WAV Lossless chuẩn Studio...";
+            statusText.style.color = "var(--silver-bright)";
+
+            fetch('/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, format, path: currentPath })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    statusText.innerText = `✨ Tải WAV thành công! Lưu tại: ${data.path}`;
+                    statusText.style.color = "var(--silver-bright)";
+                    document.getElementById('spaceDisplay').innerText = `💾 Ổ (${data.space.drive}) — Trống: ${data.space.free} / ${data.space.total}`;
+                } else {
+                    statusText.innerText = `❌ Lỗi: ${data.message}`;
+                    statusText.style.color = "red";
+                }
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            });
+        }
+    </script>
+</body>
+</html>
