@@ -285,6 +285,7 @@ def download():
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
+        'extractor_args': {'youtube': {'player_client': ['ios', 'android', 'web']}},
         'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(title)s.%(ext)s'),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
