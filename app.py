@@ -6,8 +6,6 @@ import sqlite3
 import hashlib
 from datetime import datetime, timedelta
 import shutil
-import tkinter as tk
-from tkinter import filedialog
 from werkzeug.utils import secure_filename
 import librosa
 import numpy as np
@@ -78,19 +76,14 @@ def check_is_admin(username):
 
 def get_drive_space(path):
     try:
-        drive = os.path.splitdrive(path)[0]
-        if not drive:
-            drive = "C:\\"
-        else:
-            drive += "\\"
-        total, used, free = shutil.disk_usage(drive)
+        total, used, free = shutil.disk_usage(os.getcwd())
         return {
-            "drive": drive,
+            "drive": "Cloud Storage",
             "free": f"{free / (2**30):.1f} GB",
             "total": f"{total / (2**30):.1f} GB"
         }
     except Exception:
-        return {"drive": "C:\\", "free": "0 GB", "total": "0 GB"}
+        return {"drive": "Cloud", "free": "50 GB", "total": "100 GB"}
 
 @app.route('/')
 def index():
@@ -189,16 +182,11 @@ def logout():
 
 @app.route('/browse', methods=['POST'])
 def browse():
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes('-topmost', True)
-    chosen_dir = filedialog.askdirectory()
-    root.destroy()
-
-    if chosen_dir:
-        space_info = get_drive_space(chosen_dir)
-        return jsonify({'status': 'success', 'path': chosen_dir, 'space': space_info})
-    return jsonify({'status': 'cancelled'})
+    default_dir = os.path.join(os.getcwd(), "Cyber_Downloads_Music")
+    if not os.path.exists(default_dir):
+        os.makedirs(default_dir)
+    space_info = get_drive_space(default_dir)
+    return jsonify({'status': 'success', 'path': default_dir, 'space': space_info})
 
 @app.route('/search_yt', methods=['POST'])
 def search_yt():
@@ -223,7 +211,6 @@ def search_yt():
                 artist_name = query.title()
                 channel_url = f"https://www.youtube.com/@{query.replace(' ', '')}"
                 
-                # Lấy ảnh thumbnail thực tế làm avatar cho kênh nghệ sĩ
                 channel_thumb = "https://www.youtube.com/s/desktop/f52e5052/img/favicon_144x144.png"
                 for e in entries:
                     if e.get('thumbnail'):
@@ -491,5 +478,6 @@ def get_history():
     return jsonify({'status': 'success', 'history': history_list, 'is_admin': is_adm})
 
 if __name__ == '__main__':
-    print("🚀 Cyber Music Studio Server đang chạy tại: http://127.0.0.1:5000")
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    print(f"🚀 Cyber Music Studio Server đang chạy tại cổng {port}")
+    app.run(host='0.0.0.0', port=port)
